@@ -16,7 +16,14 @@
  * const p = 13n;
  * const result = tonelliShanks(n, p); // result could be 6n or 7n
  */
+
 tonelliShanks(n, p) {
+    if (p <= 2n) {
+        throw new Error("Modulus p must be an odd prime > 2");
+    }
+    
+    // Normalize n to [0, p)
+    n = ((n % p) + p) % p;
     if (n === 0n) return 0n;
     
     // Check if n is a quadratic residue
@@ -24,18 +31,20 @@ tonelliShanks(n, p) {
         return null;
     }
     
+    // Factor out powers of 2: p - 1 = q * 2^s
     let q = p - 1n;
     let s = 0n;
-    while (q % 2n === 0n) {
-        q = q / 2n;
+    while ((q & 1n) === 0n) {  // Slightly faster than % 2n
+        q >>= 1n;
         s += 1n;
     }
     
+    // Simple case: p ≡ 3 (mod 4)
     if (s === 1n) {
-        const r = this.modPow(n, (p + 1n) / 4n, p);
-        return r;
+        return this.modPow(n, (p + 1n) / 4n, p);
     }
     
+    // Find quadratic non-residue z
     let z = 2n;
     while (this.modPow(z, (p - 1n) / 2n, p) === 1n) {
         z += 1n;
@@ -47,16 +56,17 @@ tonelliShanks(n, p) {
     let m = s;
     
     while (t !== 1n) {
-        let i = 0n;
-        let tt = t;
-        while (tt !== 1n && i < m) {
+        // Find least i such that t^(2^i) ≡ 1
+        let i = 1n;
+        let tt = (t * t) % p;
+        while (tt !== 1n) {
             tt = (tt * tt) % p;
             i += 1n;
+            if (i === m) return null;  // Shouldn't happen if p is prime
         }
         
-        if (i === m) return null;
-        
-        const b = this.modPow(c, this.modPow(2n, m - i - 1n, p - 1n), p);
+        // Update values
+        const b = this.modPow(c, 1n << (m - i - 1n), p);  // 2^(m-i-1)
         c = (b * b) % p;
         r = (r * b) % p;
         t = (t * c) % p;
